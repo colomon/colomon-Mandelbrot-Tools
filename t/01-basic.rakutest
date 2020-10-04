@@ -1,0 +1,44 @@
+use Test;
+use colomon::Mandelbrot::Tools;
+use IO::String;
+
+pass 9;
+
+{
+    my $center = -0.9093767152693321 + 0.2430755196334757i;
+    my $size-in-Z = 3 / 1.9700345287e+13;
+    my $filename = "test-file";
+    {
+        my $file = $filename.IO.open(:w);
+        write-header($file, $center, $size-in-Z, 0, 0);
+        $file.close;
+    }
+
+    my @words = $filename.IO.words;
+    my ($new-center, $view-width, $pixel-width, $iterations) = read-header(@words);
+    ok ($center - $new-center).abs < 1e-13, "Center is correct";
+    ok ($view-width - $size-in-Z).abs < 1e-15, "View width is correct";
+    is $pixel-width, 0, "Pixel width is correct";
+    is $iterations, 0, "Iterations is correct";
+}
+
+{
+    my @lines = (^5).map({ (^5000).roll(5).Array });
+    dd @lines;
+    my $filename = "test-file";
+    {
+        my $file = $filename.IO.open(:w);
+        write-body($file, @lines);
+        $file.close;
+    }
+
+    my @words = $filename.IO.words;
+    my @round-trip-lines = read-body(@words, 5);
+    dd @round-trip-lines;
+    for ^5 -> $i {
+        is @round-trip-lines[$i][$i], @lines[$i][$i], "Data doesn't match";
+    }
+}
+
+
+done-testing;

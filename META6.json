@@ -1,0 +1,24 @@
+{
+  "authors": [
+    "Solomon Foster"
+  ],
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "blah blah blah",
+  "license": "Artistic-2.0",
+  "name": "colomon::Mandelbrot::Tools",
+  "perl": "6.d",
+  "provides": {
+    "colomon::Mandelbrot::Tools": "lib/colomon/Mandelbrot/Tools.rakumod"
+  },
+  "resources": [
+  ],
+  "source-url": "",
+  "tags": [
+  ],
+  "test-depends": [
+  ],
+  "version": "0.0.1"
+}

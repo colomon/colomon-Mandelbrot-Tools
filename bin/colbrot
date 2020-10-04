@@ -1,0 +1,54 @@
+#!/usr/bin/env raku
+
+use v6;
+use colomon::Mandelbrot::Tools;
+
+sub mandel(Complex $c, $max-iterations) {
+    my $z = 0i;
+    my $i;
+    loop ($i = 0; $i < $max-iterations; $i++) {
+        if ($z.abs > 2) {
+            return $i + 1;
+        }
+        $z = $z * $z + $c;
+    }
+    return 0;
+}
+
+sub subdivide($center, $count, $range) {
+    my $min = $center - $range / 2;
+    my $max = $center + $range / 2;
+    my $delta = ($max - $min) / ($count - 1);
+    (^$count).map({ $min + $delta * $_ })
+}
+
+sub mandelbrot($size-in-pixels, $center, $size-in-Z, $max-iterations) {
+    my @lines;
+    my @reals = subdivide($center.re, $size-in-pixels, $size-in-Z);
+    for subdivide($center.im, $size-in-pixels, $size-in-Z).reverse -> $im {
+        @lines.push: @reals.map(-> $re { mandel($re + $im * i, $max-iterations) }).Array;
+    }
+    @lines;
+}
+
+multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 5000) {
+    # my $center = 0.03009294785510763 + 0.6286398312966779i;
+    # my $size-in-Z = 3 / 2.0303603950e+08;
+
+    # my $center = -1.11937500000000001e+00 + 2.60624999999999996e-01i;
+    # my $size-in-Z = 3 / 5.4522570642e+01;
+    
+    # my $center = -0.9093767152693321 + 0.2430755196334757i;
+    # my $size-in-Z = 3 / 1.9700345287e+13;
+    
+    my $center = -1.2492007333566622 + 0.020243819457737705i;
+    my $size-in-Z = 3 / 8.1694116125e+04;
+
+    my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
+    
+    my $file = $filename-to-write.IO.open(:w);
+    write-header($file, $center, $size-in-Z, $height, $max-iterations);
+    write-body($file, @lines);
+    $file.close();
+}
+
