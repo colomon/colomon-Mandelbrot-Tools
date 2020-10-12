@@ -222,14 +222,20 @@ my @color_map = (
     "44 48 64",
 );
 
-sub get-color($pixel, $max-iterations, :$bw) {
+sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
+    my $in-set = $pixel == 0;
+    if $limit.defined && $pixel > $limit {
+        $in-set = True;
+    }
+
     if $bw {
-        $pixel == 0 ?? '0 0 0' !! '255 255 255'
+        $in-set ?? '0 0 0' !! '255 255 255'
     } else {
-        if $pixel == 0 {
+        if $in-set {
             '0 0 0';
         } else {
             my $index = ($pixel / $max-iterations * (+@color_map - 1)).Int;
+            # my $index = ($pixel.log / $max-iterations.log * (+@color_map - 1)).Int;
             @color_map[$index];
         }
     }
@@ -237,7 +243,7 @@ sub get-color($pixel, $max-iterations, :$bw) {
 
 multi sub MAIN(Str $cbf-file-to-read, Str $ppm-file-to-write = $cbf-file-to-read ~ ".ppm", :$bw) {
     my @file-words = $cbf-file-to-read.IO.words;
-    my ($new-center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
+    my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
     my @lines = read-body(@file-words, +$pixel-width);
     
     my $out = $ppm-file-to-write.IO.open(:w);
@@ -248,4 +254,24 @@ multi sub MAIN(Str $cbf-file-to-read, Str $ppm-file-to-write = $cbf-file-to-read
         $out.say: $line.map(-> $pixel { get-color($pixel, $iterations, :$bw) }).join(' ');
     }
     $out.close()
+}
+
+multi sub MAIN("animate", Str $cbf-file-to-read, :$bw) {
+    my @file-words = $cbf-file-to-read.IO.words;
+    my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
+    my @lines = read-body(@file-words, +$pixel-width);
+
+    my $number-frames = 4 * 60;
+    for ^$number-frames -> $i {
+        my $limit = ($iterations / $number-frames) * $i;
+        say $limit;
+        my $out = sprintf("animate%05d.ppm", $i).IO.open(:w);
+        $out.say: "P3";
+        $out.say: "$pixel-width $pixel-width";
+        $out.say: "255";
+        for @lines -> $line {
+            $out.say: $line.map(-> $pixel { get-color($pixel, $iterations, :$bw, :$limit) }).join(' ');
+        }
+        $out.close();
+    }
 } 

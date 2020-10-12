@@ -31,7 +31,7 @@ sub mandelbrot($size-in-pixels, $center, $size-in-Z, $max-iterations) {
     @lines;
 }
 
-multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 5000) {
+multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 8000) {
     # my $center = 0.03009294785510763 + 0.6286398312966779i;
     # my $size-in-Z = 3 / 2.0303603950e+08;
 
@@ -41,8 +41,14 @@ multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 500
     # my $center = -0.9093767152693321 + 0.2430755196334757i;
     # my $size-in-Z = 3 / 1.9700345287e+13;
     
-    my $center = -1.2492007333566622 + 0.020243819457737705i;
-    my $size-in-Z = 3 / 8.1694116125e+04;
+    # my $center = -1.2492007333566622 + 0.020243819457737705i;
+    # my $size-in-Z = 3 / 8.1694116125e+04;
+    
+    # my $center = 0.3442168495954781 + 0.08243033699403171i;
+    # my $size-in-Z = 3 / 1.6823961255e+09;
+    
+    my $center = -1.045872631951076 + 0.24595404025685924i;
+    my $size-in-Z = 3 / 3.2792351329e+10;
 
     my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
     
@@ -52,3 +58,83 @@ multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 500
     $file.close();
 }
 
+multi sub MAIN("refine", Str $filename-to-read, Str $filename-to-write, :$max-iterations) {
+    my @file-words = $filename-to-read.IO.words;
+    my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
+    my @lines = read-body(@file-words, +$pixel-width);
+    if $max-iterations {
+        $iterations = $max-iterations;
+    } else {
+        $iterations *= 2;
+    }
+
+    my @reals = subdivide($center.re, $pixel-width, $view-width);
+    my @imags = subdivide($center.im, $pixel-width, $view-width).reverse;
+    for @lines.kv -> $i, $line {
+        for $line.kv -> $j, $pixel {
+            if $pixel == 0 {
+                print "working on $i $j ... ";
+                @lines[$i][$j] = mandel(@reals[$j] + @imags[$i] * i, $iterations);
+                say @lines[$i][$j];
+            }
+        }
+    }
+    
+    my $file = $filename-to-write.IO.open(:w);
+    write-header($file, $center, +$view-width, +$pixel-width, +$iterations);
+    write-body($file, @lines);
+    $file.close();
+}
+
+multi sub MAIN("enlarge", Str $filename-to-read, Str $filename-to-write, Int $new-height) {
+    my @file-words = $filename-to-read.IO.words;
+    my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
+
+    my @lines = mandelbrot($new-height, $center, $view-width, $iterations);
+    
+    my $file = $filename-to-write.IO.open(:w);
+    write-header($file, $center, +$view-width, +$new-height, +$iterations);
+    write-body($file, @lines);
+    $file.close();
+}
+
+multi sub MAIN("area", Str $filename-to-read, :$max-iterations) {
+    my @file-words = $filename-to-read.IO.words;
+    my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
+    my @lines = read-body(@file-words, +$pixel-width);
+
+    my $total-pixels = 0;
+    my $pixels-in-set = 0;
+    for @lines.kv -> $i, $line {
+        for $line.kv -> $j, $pixel {
+            $total-pixels++;
+            $pixels-in-set++ if $pixel == 0 || ($max-iterations && $pixel >= $max-iterations);
+        }
+    }
+
+    say "Pixels in set: $pixels-in-set";
+    say "Total pixels: $total-pixels";
+    say $pixels-in-set / $total-pixels * 100 ~ "%";
+}
+
+multi sub MAIN("file", Str $file-with-list-of-zooms, :$height = 1000, :$max-iterations = 8000) {
+    for $file-with-list-of-zooms.IO.lines() {
+        when / ^ (.+) " + " (.+) "i at zoom " (.+) ". jit:" (\d+) \s* $/ {
+            my $center = $0 + $1 * i;
+            my $size-in-Z = 3 / $2;
+            my $filename-to-write = $3 ~ ".cbf";
+            
+            $*ERR.say: "Working on $filename-to-write";
+
+            my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
+    
+            my $file = $filename-to-write.IO.open(:w);
+            write-header($file, $center, $size-in-Z, $height, $max-iterations);
+            write-body($file, @lines);
+            $file.close();
+        }
+        default {
+            $*ERR.say: "Didn't understand $_";
+        }
+    }
+}
