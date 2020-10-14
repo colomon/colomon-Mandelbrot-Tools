@@ -31,7 +31,7 @@ This library is free software; you can redistribute it and/or modify it under th
 
 =end pod
 
-sub write-header(IO::Handle $file, Complex $center, Num $view-width, Int $pixel-width, Int $iterations) is export {
+sub write-header(IO::Handle $file, Complex $center, Real $view-width, Int $pixel-width, Int $iterations) is export {
     $file.say: "colomon Mandelbrot 1 { $center.re } { $center.im } { $view-width } $pixel-width $iterations";
 }
 
