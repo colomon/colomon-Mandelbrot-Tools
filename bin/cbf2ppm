@@ -222,6 +222,22 @@ my @color_map = (
     "44 48 64",
 );
 
+sub linear-blend-color($color1, $color2, $t) {
+    my @low = $color1.split(/\s/).map(+*);
+    my @high = $color2.split(/\s/).map(+*);
+    my @delta = @high Z- @low;
+    my @color = @low Z+ @delta.map(* * $t);
+    @color.map(*.Int).join(" ");
+}
+
+sub log-color($pixel) {
+    my $log-pixel = $pixel.log(2);
+    my $low = $log-pixel.floor;
+    my $high = $log-pixel.ceiling;
+    my $fraction = $log-pixel - $low;
+    linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
+}
+
 sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
     my $in-set = $pixel == 0;
     if $limit.defined && $pixel > $limit {
@@ -234,9 +250,10 @@ sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
         if $in-set {
             '0 0 0';
         } else {
-            my $index = ($pixel / $max-iterations * (+@color_map - 1)).Int;
+            # my $index = ($pixel / $max-iterations * (+@color_map - 1)).Int;
             # my $index = ($pixel.log / $max-iterations.log * (+@color_map - 1)).Int;
-            @color_map[$index];
+            # @color_map[$index];
+            log-color($pixel);
         }
     }
 }
