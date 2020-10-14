@@ -119,7 +119,8 @@ multi sub MAIN("area", Str $filename-to-read, :$max-iterations) {
 
 multi sub MAIN("file", Str $file-with-list-of-zooms, :$height = 1000, :$max-iterations = 8000) {
     for $file-with-list-of-zooms.IO.lines() {
-        when / ^ (.+) " + " (.+) "i at zoom " (.+) ". jit:" (\d+) \s* $/ {
+        when / ^ \s* '#' / {}
+        when / ^ (\S+) " + " (\S+) "i at zoom " (\S+) ". jit:" (\d+) \s* $/ {
             my $center = $0 + $1 * i;
             my $size-in-Z = 3 / $2;
             my $filename-to-write = $3 ~ ".cbf";
