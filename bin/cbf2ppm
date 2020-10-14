@@ -258,7 +258,7 @@ sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
     }
 }
 
-multi sub MAIN(Str $cbf-file-to-read, Str $ppm-file-to-write = $cbf-file-to-read ~ ".ppm", :$bw) {
+sub create-ppm-file(Str $cbf-file-to-read, Str $ppm-file-to-write, :$bw) {
     my @file-words = $cbf-file-to-read.IO.words;
     my ($center, $view-width, $pixel-width, $iterations) = read-header(@file-words);
     my @lines = read-body(@file-words, +$pixel-width);
@@ -271,6 +271,17 @@ multi sub MAIN(Str $cbf-file-to-read, Str $ppm-file-to-write = $cbf-file-to-read
         $out.say: $line.map(-> $pixel { get-color($pixel, $iterations, :$bw) }).join(' ');
     }
     $out.close()
+}
+
+multi sub MAIN(Str $cbf-file-to-read, Str $ppm-file-to-write = $cbf-file-to-read ~ ".ppm", :$bw) {
+    create-ppm-file($cbf-file-to-read, $ppm-file-to-write, :$bw);
+}
+
+multi sub MAIN("mass", *@cbf-files-to-read, :$bw) {
+    for @cbf-files-to-read -> $cbf-file-to-read {
+        $*ERR.say: "Working on $cbf-file-to-read";
+        create-ppm-file($cbf-file-to-read, $cbf-file-to-read ~ ".ppm", :$bw);
+    }
 }
 
 multi sub MAIN("animate", Str $cbf-file-to-read, :$bw) {
