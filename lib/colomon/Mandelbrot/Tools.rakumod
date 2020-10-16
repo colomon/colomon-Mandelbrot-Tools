@@ -31,6 +31,39 @@ This library is free software; you can redistribute it and/or modify it under th
 
 =end pod
 
+sub use-if-there($a) {
+    $a ne "" ?? ($a) !! ();
+}
+
+sub compile_c_lib($name) is export {
+    my (@c_line, @l_line);
+    my $VM  := $*VM;
+    my $cfg := $VM.config;
+    my $libname = $VM.platform-library-name($name.IO);
+    if $VM.name eq 'moar' {
+        my $o  = $cfg<obj>;
+
+        # MoarVM exposes exposes GNU make directives here, but we cannot pass this to gcc directly.
+        my $ldshared = $cfg<ldshared>.subst(/'--out-implib,lib$(notdir $@).a'/, "--out-implib,$libname.a");
+        @c_line = $cfg<cc>, "-c", |use-if-there($cfg<ccshared>), $cfg<ccout>.trim, $name ~ $o,
+                  |$cfg<cflags>.split(/\s+/), "lib/colomon/Mandelbrot/$name.cpp";
+        @l_line = $cfg<ld>, $ldshared, |$cfg<ldflags>.trim.split(/\s+/), |$cfg<ldlibs>.trim.split(/\s+/),
+                  $cfg<ldout>.trim, $libname.Str, $name ~ $o;
+    }
+    # elsif $VM.name eq 'jvm' || $VM.name eq 'js' {
+    #     $c_line = "$cfg<nativecall.cc> -c $cfg<nativecall.ccdlflags> -o$name$cfg<nativecall.o> $cfg<nativecall.ccflags> t/04-nativecall/$name.c";
+    #     $l_line = "$cfg<nativecall.ld> $cfg<nativecall.perllibs> $cfg<nativecall.lddlflags> $cfg<nativecall.ldflags> $cfg<nativecall.ldout>$libname $name$cfg<nativecall.o>";
+    #     @cleanup = << $libname "$name$cfg<nativecall.o>" >>;
+    # }
+    else {
+        die "Unknown VM; don't know how to compile test libraries";
+    }
+    dd @c_line;
+    run @c_line;
+    dd @l_line;
+    run @l_line;
+}
+
 sub write-header(IO::Handle $file, Complex $center, Real $view-width, Int $pixel-width, Int $iterations) is export {
     $file.say: "colomon Mandelbrot 1 { $center.re } { $center.im } { $view-width } $pixel-width $iterations";
 }

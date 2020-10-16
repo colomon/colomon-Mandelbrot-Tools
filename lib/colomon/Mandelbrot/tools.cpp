@@ -1,6 +1,6 @@
 #include <complex>
 
-unsigned int
+extern "C" unsigned int
 mandel_double(double re, double im, unsigned int max_iterations)
 {
     std::complex<double> c (re, im);

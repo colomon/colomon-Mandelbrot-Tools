@@ -1,18 +1,24 @@
 #!/usr/bin/env raku
 
 use v6;
+use NativeCall;
 use colomon::Mandelbrot::Tools;
 
+compile_c_lib("tools");
+sub mandel_double(num64, num64, uint32) returns uint32 is native('./tools') { * }
+
 sub mandel(Complex $c, $max-iterations) {
-    my $z = 0i;
-    my $i;
-    loop ($i = 0; $i < $max-iterations; $i++) {
-        if ($z.abs > 2) {
-            return $i + 1;
-        }
-        $z = $z * $z + $c;
-    }
-    return 0;
+    mandel_double($c.re, $c.im, $max-iterations);
+    
+    # my $z = 0i;
+    # my $i;
+    # loop ($i = 0; $i < $max-iterations; $i++) {
+    #     if ($z.abs > 2) {
+    #         return $i + 1;
+    #     }
+    #     $z = $z * $z + $c;
+    # }
+    # return 0;
 }
 
 sub subdivide($center, $count, $range) {
@@ -73,9 +79,9 @@ multi sub MAIN("refine", Str $filename-to-read, Str $filename-to-write, :$max-it
     for @lines.kv -> $i, $line {
         for $line.kv -> $j, $pixel {
             if $pixel == 0 {
-                print "working on $i $j ... ";
+                # print "working on $i $j ... ";
                 @lines[$i][$j] = mandel(@reals[$j] + @imags[$i] * i, $iterations);
-                say @lines[$i][$j];
+                # say @lines[$i][$j];
             }
         }
     }
