@@ -1,5 +1,5 @@
 unit class colomon::Mandelbrot::Tools:ver<0.0.1>;
-
+use NativeCall;
 
 =begin pod
 
@@ -63,6 +63,53 @@ sub compile_c_lib($name) is export {
     dd @l_line;
     run @l_line;
 }
+
+my $tools-has-been-compiled = False;
+
+sub make-sure-tools-compiled {
+    compile_c_lib("tools") unless $tools-has-been-compiled;
+    $tools-has-been-compiled = True;
+}
+
+sub mandel_double(num64, num64, uint32) returns uint32 is native('./tools') { * }
+
+sub mandel(Complex $c, $max-iterations) is export {
+    make-sure-tools-compiled;
+    mandel_double($c.re, $c.im, $max-iterations);
+    
+    # my $z = 0i;
+    # my $i;
+    # loop ($i = 0; $i < $max-iterations; $i++) {
+    #     if ($z.abs > 2) {
+    #         return $i + 1;
+    #     }
+    #     $z = $z * $z + $c;
+    # }
+    # return 0;
+}
+
+sub modified_log_color_c(uint32, uint32 is rw, uint32 is rw, uint32 is rw) is native('./tools') { * }
+
+sub modified-log-color($pixel) is export {
+    make-sure-tools-compiled;
+    # my uint32 ($red, $green, $blue);
+    my $color = modified_log_color_c($pixel, my uint32 $red, my uint32 $green, my uint32 $blue);
+    "$red $green $blue";
+
+    # if $pixel < 64 {
+    #     my $low = $pixel div 16;
+    #     my $high = $low + 1;
+    #     my $fraction = (1 / 16) * ($pixel % 16);
+    #     linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
+    # } else {
+    #     my $log-pixel = $pixel.log(2) - 2;
+    #     my $low = $log-pixel.floor;
+    #     my $high = $log-pixel.ceiling;
+    #     my $fraction = $log-pixel - $low;
+    #     linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
+    # }
+}
+
 
 sub write-header(IO::Handle $file, Complex $center, Real $view-width, Int $pixel-width, Int $iterations) is export {
     $file.say: "colomon Mandelbrot 1 { $center.re } { $center.im } { $view-width } $pixel-width $iterations";

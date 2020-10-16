@@ -1,25 +1,24 @@
 #!/usr/bin/env raku
 
 use v6;
-use NativeCall;
 use colomon::Mandelbrot::Tools;
 
-compile_c_lib("tools");
-sub mandel_double(num64, num64, uint32) returns uint32 is native('./tools') { * }
-
-sub mandel(Complex $c, $max-iterations) {
-    mandel_double($c.re, $c.im, $max-iterations);
-    
-    # my $z = 0i;
-    # my $i;
-    # loop ($i = 0; $i < $max-iterations; $i++) {
-    #     if ($z.abs > 2) {
-    #         return $i + 1;
-    #     }
-    #     $z = $z * $z + $c;
-    # }
-    # return 0;
-}
+# compile_c_lib("tools");
+# sub mandel_double(num64, num64, uint32) returns uint32 is native('./tools') { * }
+#
+# sub mandel(Complex $c, $max-iterations) {
+#     mandel_double($c.re, $c.im, $max-iterations);
+#
+#     # my $z = 0i;
+#     # my $i;
+#     # loop ($i = 0; $i < $max-iterations; $i++) {
+#     #     if ($z.abs > 2) {
+#     #         return $i + 1;
+#     #     }
+#     #     $z = $z * $z + $c;
+#     # }
+#     # return 0;
+# }
 
 sub subdivide($center, $count, $range) {
     my $min = $center - $range / 2;
@@ -53,8 +52,11 @@ multi sub MAIN(Str $filename-to-write, Int $height = 999, :$max-iterations = 800
     # my $center = 0.3442168495954781 + 0.08243033699403171i;
     # my $size-in-Z = 3 / 1.6823961255e+09;
     
-    my $center = -1.045872631951076 + 0.24595404025685924i;
-    my $size-in-Z = 3 / 3.2792351329e+10;
+    # my $center = -1.045872631951076 + 0.24595404025685924i;
+    # my $size-in-Z = 3 / 3.2792351329e+10;
+    
+    my $center = 0.3718517171678465 + 0.31333884196836237i;
+    my $size-in-Z = 0.00010576196737358038;
 
     my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
     
@@ -143,5 +145,45 @@ multi sub MAIN("file", Str $file-with-list-of-zooms, :$height = 1000, :$max-iter
         default {
             $*ERR.say: "Didn't understand $_";
         }
+    }
+}
+
+multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$height = 1000, :$max-iterations = 8000) {
+    my $center = -0.75 + 0i;
+    my $size-in-Z = 2.5;
+    for ^$number-searches -> $n {
+        my $filename-to-write = $export-file-base-name ~ "-zoom$n" ~ ".cbf";
+        
+        $*ERR.say: "Working on $filename-to-write";
+
+        my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
+
+        my $file = $filename-to-write.IO.open(:w);
+        write-header($file, $center, $size-in-Z, $height, $max-iterations);
+        write-body($file, @lines);
+        $file.close();
+
+        my $lines-with-set = (^@lines).grep({ @lines[$_].grep(* == 0) > 0 });
+        my $lines-with-nonset = (^@lines).grep({ @lines[$_].grep(* > 0) > 0 });
+        my $lines-with-both = $lines-with-set ∩ $lines-with-nonset;
+        die "Can't find any appropriate lines" if +$lines-with-both == 0;
+        my $row-index = $lines-with-both.pick;
+
+        my @boundaries;
+        for (^@lines[$row-index]).rotor(2 => -1) -> [$i, $j] {
+            my $ii = @lines[$row-index][$i];
+            my $jj = @lines[$row-index][$j];
+            if ($ii == 0 && $jj > 0) || ($ii > 0 && $jj == 0) {
+                @boundaries.push($i);
+            }
+        }
+        die "Couldn't find a boundary" if +@boundaries == 0;
+        my $zoom-point = @boundaries.pick;
+
+        my @reals = subdivide($center.re, $height, $size-in-Z);
+        my @imags = subdivide($center.im, $height, $size-in-Z).reverse;
+
+        $center = @reals[$zoom-point] + @imags[$row-index] * i;
+        $size-in-Z = $size-in-Z / 3;
     }
 }

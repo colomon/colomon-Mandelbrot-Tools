@@ -2,6 +2,7 @@
 
 use v6;
 use colomon::Mandelbrot::Tools;
+use NativeCall;
 
 my @color_map = (
     "0 0 252",
@@ -238,6 +239,21 @@ sub log-color($pixel) {
     linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
 }
 
+# sub modified-log-color($pixel) {
+#     if $pixel < 64 {
+#         my $low = $pixel div 16;
+#         my $high = $low + 1;
+#         my $fraction = (1 / 16) * ($pixel % 16);
+#         linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
+#     } else {
+#         my $log-pixel = $pixel.log(2) - 2;
+#         my $low = $log-pixel.floor;
+#         my $high = $log-pixel.ceiling;
+#         my $fraction = $log-pixel - $low;
+#         linear-blend-color(@color_map[$low], @color_map[$high], $fraction);
+#     }
+# }
+
 sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
     my $in-set = $pixel == 0;
     if $limit.defined && $pixel > $limit {
@@ -253,7 +269,7 @@ sub get-color($pixel, $max-iterations, :$bw, :$limit?) {
             # my $index = ($pixel / $max-iterations * (+@color_map - 1)).Int;
             # my $index = ($pixel.log / $max-iterations.log * (+@color_map - 1)).Int;
             # @color_map[$index];
-            log-color($pixel);
+            modified-log-color($pixel);
         }
     }
 }
@@ -281,6 +297,12 @@ multi sub MAIN("mass", *@cbf-files-to-read, :$bw) {
     for @cbf-files-to-read -> $cbf-file-to-read {
         $*ERR.say: "Working on $cbf-file-to-read";
         create-ppm-file($cbf-file-to-read, $cbf-file-to-read ~ ".ppm", :$bw);
+    }
+}
+
+multi sub MAIN("test") {
+    for @color_map -> $color {
+        say $color.words.join(", ") ~ ",";
     }
 }
 
