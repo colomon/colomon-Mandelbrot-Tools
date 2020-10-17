@@ -148,18 +148,19 @@ multi sub MAIN("file", Str $file-with-list-of-zooms, :$height = 1000, :$max-iter
     }
 }
 
-multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$height = 1000, :$max-iterations = 8000) {
+multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$height = 1000, :$max-iterations = 1000) {
     my $center = -0.75 + 0i;
     my $size-in-Z = 2.5;
+    my $iterations = $max-iterations;
     for ^$number-searches -> $n {
         my $filename-to-write = $export-file-base-name ~ "-zoom$n" ~ ".cbf";
         
         $*ERR.say: "Working on $filename-to-write";
 
-        my @lines = mandelbrot($height, $center, $size-in-Z, $max-iterations);
+        my @lines = mandelbrot($height, $center, $size-in-Z, $iterations);
 
         my $file = $filename-to-write.IO.open(:w);
-        write-header($file, $center, $size-in-Z, $height, $max-iterations);
+        write-header($file, $center, $size-in-Z, $height, $iterations);
         write-body($file, @lines);
         $file.close();
 
@@ -185,5 +186,6 @@ multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$hei
 
         $center = @reals[$zoom-point] + @imags[$row-index] * i;
         $size-in-Z = $size-in-Z / 3;
+        $iterations *= 2;
     }
 }

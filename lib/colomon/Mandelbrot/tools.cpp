@@ -294,7 +294,7 @@ modified_log_color_c (unsigned int pixel, unsigned int *red, unsigned int *green
     }
     else
     {
-        double log_pixel = log(pixel) / log(2) - 2;
+        double log_pixel = log(pixel) / log(sqrt(2)) - 8;
         // printf ("pixel = %d  log_pixel = %g\n", pixel, log_pixel);
         double low = floor(log_pixel);
         unsigned int high = low + 1;
