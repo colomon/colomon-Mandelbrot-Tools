@@ -148,6 +148,25 @@ multi sub MAIN("file", Str $file-with-list-of-zooms, :$height = 1000, :$max-iter
     }
 }
 
+sub count-boundaries(@line) {
+    my $count = 0;
+    my $in-set = @line[0] == 0;
+    for @line -> $n {
+        if $in-set {
+            if $n != 0 {
+                $count++;
+                $in-set = False;
+            }
+        } else {
+            if $n == 0 {
+                $count++;
+                $in-set = True;
+            }
+        }
+    }
+    $count;
+}
+
 multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$height = 1000, :$max-iterations = 1000) {
     my $center = -0.75 + 0i;
     my $size-in-Z = 2.5;
@@ -164,11 +183,9 @@ multi sub MAIN("random", Str $export-file-base-name, Int $number-searches, :$hei
         write-body($file, @lines);
         $file.close();
 
-        my $lines-with-set = (^@lines).grep({ @lines[$_].grep(* == 0) > 0 });
-        my $lines-with-nonset = (^@lines).grep({ @lines[$_].grep(* > 0) > 0 });
-        my $lines-with-both = $lines-with-set ∩ $lines-with-nonset;
-        die "Can't find any appropriate lines" if +$lines-with-both == 0;
-        my $row-index = $lines-with-both.pick;
+        my $boundary-count = (^@lines).map({ $_ => count-boundaries(@lines[$_]) }).Bag;
+        my $row-index = $boundary-count.pick;
+        say "$row-index has { $boundary-count{$row-index} } boundaries";
 
         my @boundaries;
         for (^@lines[$row-index]).rotor(2 => -1) -> [$i, $j] {
