@@ -47,7 +47,7 @@ sub compile_c_lib($name) is export {
         my $ldshared = $cfg<ldshared>.subst(/'--out-implib,lib$(notdir $@).a'/, "--out-implib,$libname.a");
         @c_line = $cfg<cc>, "-c", |use-if-there($cfg<ccshared>), $cfg<ccout>.trim, $name ~ $o,
                   |$cfg<cflags>.split(/\s+/), "lib/colomon/Mandelbrot/$name.cpp";
-        @l_line = $cfg<ld>, $ldshared, |$cfg<ldflags>.trim.split(/\s+/), |$cfg<ldlibs>.trim.split(/\s+/),
+        @l_line = $cfg<ld>, |$ldshared.words, |$cfg<ldflags>.trim.split(/\s+/), |$cfg<ldlibs>.trim.split(/\s+/),
                   $cfg<ldout>.trim, $libname.Str, $name ~ $o;
     }
     # elsif $VM.name eq 'jvm' || $VM.name eq 'js' {
